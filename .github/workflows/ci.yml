@@ -28,11 +28,13 @@ jobs:
           - { os: windows-latest, preset: ci-windows     }
 
     steps:
-      - name: Checkout (with vcpkg submodule)
+      - name: Checkout (main repo only, shallow)
         uses: actions/checkout@v4
         with:
-          submodules: recursive
           fetch-depth: 1
+
+      - name: Clone vcpkg submodule (full history)
+        run: git submodule update --init --recursive external/vcpkg
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v5
@@ -58,7 +60,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
-          key: vcpkg-${{ runner.os }}-${{ matrix.preset }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'external/vcpkg/.git/HEAD') }}
+          key: vcpkg-${{ runner.os }}-${{ matrix.preset }}-${{ hashFiles('vcpkg.json', '.gitmodules') }}
           restore-keys: |
             vcpkg-${{ runner.os }}-${{ matrix.preset }}-
             vcpkg-${{ runner.os }}-

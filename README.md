@@ -106,6 +106,5 @@ cmake --preset linux-gcc-release \
 ├── src/{CMakeLists.txt,greeter.cpp}
 ├── app/{CMakeLists.txt,main.cpp}
 ├── tests/{CMakeLists.txt,greeter_test.cpp}
-├── vcpkg.json
-└── vcpkg-configuration.json
+└── vcpkg.json
 ```
