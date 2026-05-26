@@ -16,7 +16,6 @@ jobs:
     name: ${{ matrix.preset }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
         include:
           - { os: ubuntu-latest,  preset: ci-linux-gcc   }
