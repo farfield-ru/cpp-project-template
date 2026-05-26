@@ -10,8 +10,11 @@ cache.
 - `sample` — a static library (`src/`, `include/sample/`)
 - `sample_app` — an executable linking the library (`app/`)
 - `sample_tests` — Catch2 unit tests registered with CTest (`tests/`)
-- `CMakePresets.json` — configure / build / test / workflow presets for
-  GCC, Clang, AppleClang, MSVC; Debug, Release, and ASan/UBSan variants
+- `CMakePresets.json` — host-OS-scoped configure / build / test / workflow
+  presets (`linux`, `macos`, `windows`) with `*-debug`, `*-release`, and
+  `*-asan` variants. The compiler is **not** baked into preset names —
+  set `CC` / `CXX` (or `CMAKE_C_COMPILER` / `CMAKE_CXX_COMPILER`) to pick
+  one. Sanitizer presets are the one exception: they pin clang.
 - `vcpkg.json` — manifest pinning Catch2 via the vendored builtin baseline
 - `.github/workflows/ci.yml` — matrix CI across Linux (GCC + Clang),
   macOS (AppleClang), and Windows (MSVC), with `actions/cache` keyed on
@@ -34,29 +37,41 @@ cache.
 git clone --recurse-submodules https://github.com/farfield-ru/cpp-project-template.git
 cd cpp-project-template
 
-# pick the workflow that matches your platform:
-cmake --workflow --preset ci-linux-gcc      # Linux (GCC)
-cmake --workflow --preset ci-linux-clang    # Linux (Clang)
-cmake --workflow --preset ci-macos          # macOS (AppleClang)
-cmake --workflow --preset ci-windows        # Windows (MSVC, run in a VS dev shell)
+# Linux — defaults to gcc if CC/CXX aren't set
+cmake --workflow --preset ci-linux
+
+# Linux with clang
+CC=clang CXX=clang++ cmake --workflow --preset ci-linux
+
+# macOS (AppleClang)
+cmake --workflow --preset ci-macos
+
+# Windows — run in a Visual Studio "Developer Command Prompt"
+cmake --workflow --preset ci-windows
 ```
 
 Each workflow runs configure → build → test in one step. First run pulls
 Catch2 through vcpkg; subsequent runs hit the local binary cache
 (`~/.cache/vcpkg/archives` on Linux/macOS, `%LOCALAPPDATA%\vcpkg\archives` on
-Windows) and are much faster.
+Windows) and are much faster. Only presets matching the host OS are visible
+on a given machine, so `cmake --list-presets` stays uncluttered.
 
 ### Granular presets
 
 ```bash
 cmake --list-presets
-cmake --preset linux-clang-asan
-cmake --build --preset linux-clang-asan
-ctest --preset linux-clang-asan
+cmake --preset linux-debug              # gcc by default; CC=clang for clang
+cmake --build --preset linux-debug
+ctest --preset linux-debug
+
+cmake --preset linux-asan               # always clang (ASan/UBSan)
+cmake --build --preset linux-asan
+ctest --preset linux-asan
 ```
 
 Sanitizer presets (`*-asan`) enable AddressSanitizer + UndefinedBehaviorSanitizer
-via the `SAMPLE_ENABLE_SANITIZERS` CMake option. Skipped on MSVC.
+via the `SAMPLE_ENABLE_SANITIZERS` CMake option and pin the compiler to
+clang. No `windows-asan` preset (MSVC sanitizer setup is different).
 
 ## Adding a dependency
 
@@ -84,7 +99,7 @@ The presets default to the vendored `external/vcpkg`. To use a different
 vcpkg installation, override the toolchain on the command line:
 
 ```bash
-cmake --preset linux-gcc-release \
+cmake --preset linux-release \
   -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake
 ```
 
