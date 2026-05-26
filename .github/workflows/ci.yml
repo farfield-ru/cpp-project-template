@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-cache
+
+jobs:
+  build:
+    name: ${{ matrix.preset }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest,  preset: ci-linux-gcc   }
+          - { os: ubuntu-latest,  preset: ci-linux-clang }
+          - { os: macos-latest,   preset: ci-macos       }
+          - { os: windows-latest, preset: ci-windows     }
+
+    steps:
+      - name: Checkout (with vcpkg submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      - name: Install Clang (Linux Clang preset only)
+        if: matrix.preset == 'ci-linux-clang'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang
+          clang --version
+
+      - name: Set up MSVC dev environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Create vcpkg binary cache dir
+        shell: bash
+        run: mkdir -p "${VCPKG_DEFAULT_BINARY_CACHE}"
+
+      - name: Cache vcpkg binary archives
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-${{ runner.os }}-${{ matrix.preset }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'external/vcpkg/.git/HEAD') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-${{ matrix.preset }}-
+            vcpkg-${{ runner.os }}-
+
+      - name: Bootstrap vcpkg (Unix)
+        if: runner.os != 'Windows'
+        run: ./external/vcpkg/bootstrap-vcpkg.sh -disableMetrics
+
+      - name: Bootstrap vcpkg (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: external\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+
+      - name: Run CMake workflow
+        shell: bash
+        env:
+          VCPKG_ROOT: ${{ github.workspace }}/external/vcpkg
+        run: cmake --workflow --preset ${{ matrix.preset }}
+
+      - name: Upload test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-${{ matrix.preset }}
+          path: |
+            build/**/Testing/Temporary/LastTest.log
+            build/**/CMakeFiles/CMakeOutput.log
+            build/**/CMakeFiles/CMakeError.log
+          if-no-files-found: ignore

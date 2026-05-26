@@ -1,0 +1,29 @@
+# Build output
+build/
+out/
+cmake-build-*/
+
+# CMake user-local presets
+CMakeUserPresets.json
+
+# vcpkg local state
+.vcpkg-cache/
+external/vcpkg/buildtrees/
+external/vcpkg/downloads/
+external/vcpkg/packages/
+external/vcpkg/installed/
+external/vcpkg/vcpkg
+external/vcpkg/vcpkg.exe
+
+# IDE / editor
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+.cache/
+compile_commands.json
+
+# OS
+.DS_Store
+Thumbs.db
