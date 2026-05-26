@@ -16,16 +16,16 @@ env:
 
 jobs:
   build:
-    name: ${{ matrix.preset }} (${{ matrix.os }})
+    name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest,  preset: ci-linux-gcc   }
-          - { os: ubuntu-latest,  preset: ci-linux-clang }
-          - { os: macos-latest,   preset: ci-macos       }
-          - { os: windows-latest, preset: ci-windows     }
+          - { name: linux-gcc,   os: ubuntu-latest,  preset: ci-linux,   cc: gcc,   cxx: g++     }
+          - { name: linux-clang, os: ubuntu-latest,  preset: ci-linux,   cc: clang, cxx: clang++ }
+          - { name: macos,       os: macos-latest,   preset: ci-macos    }
+          - { name: windows,     os: windows-latest, preset: ci-windows  }
 
     steps:
       - name: Checkout (main repo only, shallow)
@@ -44,7 +44,7 @@ jobs:
         run: |
           sudo apt-get update
           pkgs="patchelf"
-          if [ "${{ matrix.preset }}" = "ci-linux-clang" ]; then
+          if [ "${{ matrix.cxx }}" = "clang++" ]; then
             pkgs="$pkgs clang"
           fi
           sudo apt-get install -y $pkgs
@@ -64,9 +64,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
-          key: vcpkg-${{ runner.os }}-${{ matrix.preset }}-${{ hashFiles('vcpkg.json', '.gitmodules') }}
+          key: vcpkg-${{ runner.os }}-${{ matrix.name }}-${{ hashFiles('vcpkg.json', '.gitmodules') }}
           restore-keys: |
-            vcpkg-${{ runner.os }}-${{ matrix.preset }}-
+            vcpkg-${{ runner.os }}-${{ matrix.name }}-
             vcpkg-${{ runner.os }}-
 
       - name: Bootstrap vcpkg (Unix)
@@ -82,13 +82,15 @@ jobs:
         shell: bash
         env:
           VCPKG_ROOT: ${{ github.workspace }}/external/vcpkg
+          CC:  ${{ matrix.cc  }}
+          CXX: ${{ matrix.cxx }}
         run: cmake --workflow --preset ${{ matrix.preset }}
 
       - name: Upload test logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: test-logs-${{ matrix.preset }}
+          name: test-logs-${{ matrix.name }}
           path: |
             build/**/Testing/Temporary/LastTest.log
             build/**/CMakeFiles/CMakeOutput.log
