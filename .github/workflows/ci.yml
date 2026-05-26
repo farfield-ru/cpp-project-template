@@ -39,12 +39,16 @@ jobs:
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v5
 
-      - name: Install Clang (Linux Clang preset only)
-        if: matrix.preset == 'ci-linux-clang'
+      - name: Install Linux build deps (patchelf, optional clang)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang
-          clang --version
+          pkgs="patchelf"
+          if [ "${{ matrix.preset }}" = "ci-linux-clang" ]; then
+            pkgs="$pkgs clang"
+          fi
+          sudo apt-get install -y $pkgs
+          patchelf --version
 
       - name: Set up MSVC dev environment
         if: runner.os == 'Windows'

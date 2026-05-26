@@ -23,6 +23,10 @@ cache.
 - Ninja
 - A C++20 compiler (GCC 11+, Clang 14+, MSVC 19.30+ / VS 2022, AppleClang 14+)
 - Git (for the vcpkg submodule)
+- **Linux only:** `patchelf` from the system package manager
+  (`sudo apt-get install patchelf`). The Linux presets set
+  `VCPKG_FORCE_SYSTEM_BINARIES=1` so vcpkg uses the system `patchelf`
+  (its bundled one is outdated) along with system CMake/Ninja.
 
 ## Quick start
 
