@@ -24,15 +24,20 @@ jobs:
           - { name: windows,     os: windows-latest, preset: ci-windows  }
 
     steps:
-      - name: Checkout (main repo only, shallow)
+      - name: Checkout (incl. vcpkg submodule)
         uses: actions/checkout@v6
         with:
-          fetch-depth: 1
-
-      - name: Clone vcpkg submodule (full history)
-        run: git submodule update --init --recursive external/vcpkg
+          submodules: recursive
+          # vcpkg needs full history of its own repo so it can resolve
+          # port versions against the manifest's builtin-baseline; a
+          # shallow vcpkg clone makes `git read-tree <port-tree-sha>`
+          # fail. actions/checkout applies fetch-depth uniformly to
+          # submodules, so we accept full history for the (tiny) main
+          # repo too rather than splitting into two steps.
+          fetch-depth: 0
 
       - name: Install Ninja
+        if: runner.os != 'Windows'
         uses: seanmiddleditch/gha-setup-ninja@v6
 
       - name: Install Linux build deps (patchelf, optional clang)
