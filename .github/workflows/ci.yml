@@ -39,11 +39,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          pkgs="patchelf"
-          if [ "${{ matrix.cxx }}" = "clang++" ]; then
-            pkgs="$pkgs clang"
-          fi
-          sudo apt-get install -y $pkgs
+          sudo apt-get install -y clang patchelf
           patchelf --version
 
       - name: Set up MSVC dev environment
@@ -74,12 +70,12 @@ jobs:
         shell: cmd
         run: external\vcpkg\bootstrap-vcpkg.bat -disableMetrics
 
-      - name: Run CMake workflow
+      - name: Configure, build, and test
         shell: bash
         env:
-          VCPKG_ROOT: ${{ github.workspace }}/external/vcpkg
           CC:  ${{ matrix.cc  }}
           CXX: ${{ matrix.cxx }}
+          VCPKG_ROOT: ${{ github.workspace }}/external/vcpkg
         run: cmake --workflow --preset ${{ matrix.preset }}
 
       - name: Upload test logs on failure
@@ -88,7 +84,7 @@ jobs:
         with:
           name: test-logs-${{ matrix.name }}
           path: |
-            build/**/Testing/Temporary/LastTest.log
-            build/**/CMakeFiles/CMakeOutput.log
             build/**/CMakeFiles/CMakeError.log
+            build/**/CMakeFiles/CMakeOutput.log
+            build/**/Testing/Temporary/LastTest.log
           if-no-files-found: ignore
