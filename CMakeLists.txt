@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.25)
 
+# vcpkg refuses to start if VCPKG_DEFAULT_BINARY_CACHE points at a
+# missing directory. The presets set it to ${sourceDir}/.vcpkg-cache
+# (project-local, git-ignored, survives `rm -rf build/`); make sure
+# it exists before the toolchain runs as part of `project()`.
+if(DEFINED ENV{VCPKG_DEFAULT_BINARY_CACHE})
+    file(MAKE_DIRECTORY "$ENV{VCPKG_DEFAULT_BINARY_CACHE}")
+endif()
+
 project(sample
     VERSION 0.1.0
     DESCRIPTION "C++ project template (CMake + vcpkg + Ninja)"

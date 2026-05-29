@@ -8,9 +8,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-cache
-
 jobs:
   build:
     name: ${{ matrix.name }}
@@ -57,12 +54,12 @@ jobs:
 
       - name: Create vcpkg binary cache dir
         shell: bash
-        run: mkdir -p "${VCPKG_DEFAULT_BINARY_CACHE}"
+        run: mkdir -p "${{ github.workspace }}/.vcpkg-cache"
 
       - name: Cache vcpkg binary archives
         uses: actions/cache@v5
         with:
-          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          path: ${{ github.workspace }}/.vcpkg-cache
           key: vcpkg-${{ runner.os }}-${{ matrix.name }}-${{ hashFiles('vcpkg.json', '.gitmodules') }}
           restore-keys: |
             vcpkg-${{ runner.os }}-${{ matrix.name }}-
