@@ -51,10 +51,16 @@ cmake --workflow --preset ci-windows
 ```
 
 Each workflow runs configure → build → test in one step. First run pulls
-Catch2 through vcpkg; subsequent runs hit the local binary cache
-(`~/.cache/vcpkg/archives` on Linux/macOS, `%LOCALAPPDATA%\vcpkg\archives` on
-Windows) and are much faster. Only presets matching the host OS are visible
-on a given machine, so `cmake --list-presets` stays uncluttered.
+Catch2 through vcpkg; subsequent runs hit the project-local binary cache at
+`.vcpkg-cache/` (pinned by the configure presets and ignored by git), so a
+`rm -rf build/` does not force a rebuild of the dependencies. Only presets
+matching the host OS are visible on a given machine, so `cmake --list-presets`
+stays uncluttered.
+
+To relocate the cache (e.g. to share it across checkouts), override
+`VCPKG_DEFAULT_BINARY_CACHE` via a `CMakeUserPresets.json` rather than via
+the shell — CMake applies the preset's `environment` on top of inherited
+shell env when invoking vcpkg.
 
 ### Granular presets
 
