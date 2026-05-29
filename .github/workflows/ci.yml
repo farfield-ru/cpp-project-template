@@ -35,9 +35,15 @@ jobs:
         # to clone in downstream projects with long histories.
         run: git submodule update --init --recursive external/vcpkg
 
-      - name: Install Ninja
-        if: runner.os != 'Windows'
-        uses: seanmiddleditch/gha-setup-ninja@v6
+      - name: Enable compiler problem matchers
+        shell: bash
+        run: |
+          echo "::add-matcher::.github/matchers/gcc.json"
+          echo "::add-matcher::.github/matchers/msvc.json"
+          echo "::add-matcher::.github/matchers/cmake.json"
+
+      - name: Install CMake and Ninja
+        uses: lukka/get-cmake@latest
 
       - name: Install Linux build deps (patchelf, optional clang)
         if: runner.os == 'Linux'
@@ -65,12 +71,20 @@ jobs:
             vcpkg-${{ runner.os }}-${{ matrix.name }}-
             vcpkg-${{ runner.os }}-
 
+      - name: Cache vcpkg bootstrap output
+        uses: actions/cache@v5
+        with:
+          path: |
+            external/vcpkg/vcpkg
+            external/vcpkg/vcpkg.exe
+          key: vcpkg-bootstrap-${{ runner.os }}-${{ hashFiles('.gitmodules', 'external/vcpkg/scripts/buildsystems/vcpkg.cmake') }}
+
       - name: Bootstrap vcpkg (Unix)
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && hashFiles('external/vcpkg/vcpkg') == ''
         run: ./external/vcpkg/bootstrap-vcpkg.sh -disableMetrics
 
       - name: Bootstrap vcpkg (Windows)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && hashFiles('external/vcpkg/vcpkg.exe') == ''
         shell: cmd
         run: external\vcpkg\bootstrap-vcpkg.bat -disableMetrics
 
@@ -81,6 +95,22 @@ jobs:
           CXX: ${{ matrix.cxx }}
           VCPKG_ROOT: ${{ github.workspace }}/external/vcpkg
         run: cmake --workflow --preset ${{ matrix.preset }}
+
+      - name: Dump CMake and vcpkg logs on failure
+        if: failure()
+        shell: bash
+        run: |
+          set +e
+          for f in build/*/vcpkg-manifest-install.log \
+                   build/*/CMakeFiles/CMakeError.log \
+                   build/*/CMakeFiles/CMakeOutput.log \
+                   build/*/Testing/Temporary/LastTest.log; do
+            if [ -f "$f" ]; then
+              echo "::group::$f"
+              cat "$f"
+              echo "::endgroup::"
+            fi
+          done
 
       - name: Upload test logs on failure
         if: failure()
