@@ -1,6 +1,13 @@
 name: CI
 
 on:
+  # Run on push to main so caches get saved under main's scope after
+  # every merge. GitHub Actions scopes caches to the branch that
+  # created them plus the default branch; without a main-triggered
+  # run there is no way for a fresh PR branch to see cache entries
+  # from prior PRs.
+  push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -108,6 +115,11 @@ jobs:
           CC:  ${{ matrix.cc  }}
           CXX: ${{ matrix.cxx }}
           VCPKG_ROOT: ${{ github.workspace }}/external/vcpkg
+          # Explicit binary source list. `clear` removes the implicit
+          # default backend so we deterministically use exactly this
+          # files-based cache for both reads and writes, regardless of
+          # vcpkg's defaults across versions.
+          VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/.vcpkg-cache,readwrite
         run: cmake --workflow --preset ${{ matrix.preset }}
 
       - name: Dump CMake and vcpkg logs on failure
