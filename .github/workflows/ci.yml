@@ -35,6 +35,11 @@ jobs:
         # to clone in downstream projects with long histories.
         run: git submodule update --init --recursive external/vcpkg
 
+      - name: Compute vcpkg cache key segments
+        id: keys
+        shell: bash
+        run: .github/scripts/vcpkg-cache-keys.sh
+
       - name: Enable compiler problem matchers
         shell: bash
         run: |
@@ -66,10 +71,12 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ${{ github.workspace }}/.vcpkg-cache
-          key: vcpkg-${{ runner.os }}-${{ matrix.name }}-${{ hashFiles('vcpkg.json', '.gitmodules') }}
+          # Primary: identical image + identical vcpkg SHA + identical vcpkg.json.
+          # Restore-key: same image + same vcpkg SHA, only vcpkg.json differs.
+          # Adding/removing a dep keeps archives of unchanged ports valid.
+          key: vcpkg-archives-${{ steps.keys.outputs.image }}-${{ matrix.name }}-vcpkg-${{ steps.keys.outputs.vcpkg_sha }}-${{ hashFiles('vcpkg.json') }}
           restore-keys: |
-            vcpkg-${{ runner.os }}-${{ matrix.name }}-
-            vcpkg-${{ runner.os }}-
+            vcpkg-archives-${{ steps.keys.outputs.image }}-${{ matrix.name }}-vcpkg-${{ steps.keys.outputs.vcpkg_sha }}-
 
       - name: Cache vcpkg bootstrap output
         uses: actions/cache@v5
@@ -77,7 +84,10 @@ jobs:
           path: |
             external/vcpkg/vcpkg
             external/vcpkg/vcpkg.exe
-          key: vcpkg-bootstrap-${{ runner.os }}-${{ hashFiles('.gitmodules', 'external/vcpkg/scripts/buildsystems/vcpkg.cmake') }}
+          # No restore-keys: the executable is tied to a specific vcpkg
+          # SHA, no useful partial match. Bootstrap on miss is ~10–20 s.
+          # matrix.name is omitted: bootstrap output is compiler-agnostic.
+          key: vcpkg-bootstrap-${{ steps.keys.outputs.image }}-vcpkg-${{ steps.keys.outputs.vcpkg_sha }}
 
       - name: Bootstrap vcpkg (Unix)
         if: runner.os != 'Windows' && hashFiles('external/vcpkg/vcpkg') == ''
