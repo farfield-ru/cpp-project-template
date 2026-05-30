@@ -126,14 +126,20 @@ cmake --preset linux-release \
 
 ```
 .
-├── .github/workflows/ci.yml
+├── .github/
+│   ├── workflows/ci.yml            # matrix CI (Linux GCC+Clang, macOS, Windows)
+│   ├── scripts/vcpkg-cache-keys.sh # emits cache-key segments for ci.yml
+│   ├── matchers/                   # GCC/Clang/MSVC/CMake problem matchers
+│   └── dependabot.yml              # weekly bumps for actions/* pins
 ├── CMakeLists.txt
 ├── CMakePresets.json
 ├── cmake/ProjectOptions.cmake
-├── external/vcpkg/                # submodule
+├── external/vcpkg/                 # submodule, full history
 ├── include/sample/greeter.hpp
 ├── src/{CMakeLists.txt,greeter.cpp}
 ├── app/{CMakeLists.txt,main.cpp}
 ├── tests/{CMakeLists.txt,greeter_test.cpp}
-└── vcpkg.json
+├── vcpkg.json
+├── LICENSE
+└── README.md
 ```
