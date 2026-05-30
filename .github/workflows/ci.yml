@@ -89,14 +89,18 @@ jobs:
           # matrix.name is omitted: bootstrap output is compiler-agnostic.
           key: vcpkg-bootstrap-${{ steps.keys.outputs.image }}-vcpkg-${{ steps.keys.outputs.vcpkg_sha }}
 
-      - name: Bootstrap vcpkg (Unix)
-        if: runner.os != 'Windows' && hashFiles('external/vcpkg/vcpkg') == ''
-        run: ./external/vcpkg/bootstrap-vcpkg.sh -disableMetrics
-
-      - name: Bootstrap vcpkg (Windows)
-        if: runner.os == 'Windows' && hashFiles('external/vcpkg/vcpkg.exe') == ''
-        shell: cmd
-        run: external\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+      - name: Bootstrap vcpkg
+        # Skip when the bootstrap cache restored the executable. hashFiles
+        # returns '' only when *neither* file exists, which is the
+        # only state in which bootstrap actually needs to run.
+        if: hashFiles('external/vcpkg/vcpkg', 'external/vcpkg/vcpkg.exe') == ''
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            ./external/vcpkg/bootstrap-vcpkg.bat -disableMetrics
+          else
+            ./external/vcpkg/bootstrap-vcpkg.sh -disableMetrics
+          fi
 
       - name: Configure, build, and test
         shell: bash
