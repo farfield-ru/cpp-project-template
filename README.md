@@ -17,11 +17,12 @@ cache.
   one. Sanitizer presets are the one exception: they pin clang.
 - `vcpkg.json` — manifest pinning Catch2 via the vendored builtin baseline
 - `.github/workflows/ci.yml` — matrix CI across Linux (GCC + Clang),
-  macOS (AppleClang), and Windows (MSVC). Uses `lukka/get-cmake` for a
-  single cross-platform CMake + Ninja install, two `actions/cache` entries
-  (vcpkg binary archives and the bootstrapped `vcpkg` executable), and
-  GCC/Clang/MSVC/CMake problem matchers under `.github/matchers/` for
-  inline compiler-error annotations on PRs
+  macOS (AppleClang), and Windows (MSVC). Relies entirely on tools
+  preinstalled on the GitHub-hosted runner images (CMake, Ninja, clang,
+  patchelf, vswhere) — no third-party CI actions. Includes two
+  `actions/cache` entries (vcpkg binary archives and the bootstrapped
+  `vcpkg` executable) and GCC/Clang/MSVC/CMake problem matchers under
+  `.github/matchers/` for inline compiler-error annotations on PRs
 
 ## Prerequisites
 
