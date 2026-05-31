@@ -75,16 +75,20 @@ jobs:
         shell: bash
         run: mkdir -p "${{ github.workspace }}/.vcpkg-cache"
 
-      - name: Cache vcpkg binary archives
-        uses: actions/cache@v5
+      - name: Restore vcpkg binary archives
+        # vcpkg names archives by its own ABI hash, so old archives that
+        # don't match the current toolchain are inert (ignored), not
+        # harmful. We restore whatever the most recent cache for this
+        # (image, matrix entry) has and let vcpkg decide what is reusable.
+        # The primary key intentionally won't match anything since the
+        # save side appends a content hash; restore-keys does the lookup.
+        id: archives-restore
+        uses: actions/cache/restore@v5
         with:
           path: ${{ github.workspace }}/.vcpkg-cache
-          # Primary: identical image + identical vcpkg SHA + identical vcpkg.json.
-          # Restore-key: same image + same vcpkg SHA, only vcpkg.json differs.
-          # Adding/removing a dep keeps archives of unchanged ports valid.
-          key: vcpkg-archives-${{ steps.keys.outputs.image }}-${{ matrix.name }}-vcpkg-${{ steps.keys.outputs.vcpkg_sha }}-${{ hashFiles('vcpkg.json') }}
+          key: vcpkg-archives-${{ steps.keys.outputs.image }}-${{ matrix.name }}-NEVER-MATCH
           restore-keys: |
-            vcpkg-archives-${{ steps.keys.outputs.image }}-${{ matrix.name }}-vcpkg-${{ steps.keys.outputs.vcpkg_sha }}-
+            vcpkg-archives-${{ steps.keys.outputs.image }}-${{ matrix.name }}-
 
       - name: Cache vcpkg bootstrap output
         uses: actions/cache@v5
@@ -122,6 +126,31 @@ jobs:
           # vcpkg's defaults across versions.
           VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/.vcpkg-cache,readwrite
         run: cmake --workflow --preset ${{ matrix.preset }}
+
+      - name: Hash .vcpkg-cache for save key
+        # Suffix of the save key. Lets the save step decide whether the
+        # cache content actually changed since restore.
+        id: archives-content
+        if: always()
+        shell: bash
+        run: .github/scripts/vcpkg-cache-content-hash.sh
+
+      - name: Save vcpkg binary archives
+        # Three guards (see plan doc / commit message for the full
+        # walk-through):
+        #   always()       — run even when build/tests failed; partially
+        #                    populated caches are still useful.
+        #   hash != empty  — skip when there are no archives to save.
+        #   !endsWith(...) — skip when content is byte-identical to what
+        #                    we restored (no churn for no-op runs).
+        if: |
+          always()
+          && steps.archives-content.outputs.hash != 'empty'
+          && !endsWith(steps.archives-restore.outputs.cache-matched-key || '', steps.archives-content.outputs.hash)
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ github.workspace }}/.vcpkg-cache
+          key: vcpkg-archives-${{ steps.keys.outputs.image }}-${{ matrix.name }}-${{ steps.archives-content.outputs.hash }}
 
       - name: Dump CMake and vcpkg logs on failure
         if: failure()
