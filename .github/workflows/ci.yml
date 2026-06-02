@@ -16,6 +16,19 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  format-check:
+    name: clang-format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Check formatting
+        shell: bash
+        run: .github/scripts/clang-format-check.sh
+
   build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}

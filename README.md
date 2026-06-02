@@ -23,6 +23,9 @@ cache.
   `actions/cache` entries (vcpkg binary archives and the bootstrapped
   `vcpkg` executable) and GCC/Clang/MSVC/CMake problem matchers under
   `.github/matchers/` for inline compiler-error annotations on PRs
+- `.clang-format` (Google base, 4-space indent, 100-col) and a
+  `clang-format` CI job that runs `clang-format --dry-run --Werror` on
+  every tracked C/C++ source file
 
 ## Prerequisites
 
@@ -113,6 +116,23 @@ cmake --preset linux-release \
   -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake
 ```
 
+## Formatting
+
+The repo is formatted with `clang-format` (config in `.clang-format`). CI
+fails the build if any tracked C/C++ source would be reformatted. To
+check / apply locally:
+
+```bash
+# Check (same command CI runs)
+.github/scripts/clang-format-check.sh
+
+# Reformat in place
+git ls-files -- '*.c' '*.cc' '*.cpp' '*.cxx' '*.h' '*.hh' '*.hpp' '*.hxx' \
+  ':!external/**' | xargs clang-format -i
+```
+
+Use clang-format ≥ 18 for output that matches CI.
+
 ## Using this as a template
 
 1. Create a new repo from this one (GitHub "Use this template" or
@@ -128,9 +148,11 @@ cmake --preset linux-release \
 .
 ├── .github/
 │   ├── workflows/ci.yml            # matrix CI (Linux GCC+Clang, macOS, Windows)
-│   ├── scripts/vcpkg-cache-keys.sh # emits cache-key segments for ci.yml
+│   ├── scripts/                    # cache-key + clang-format helper scripts
 │   ├── matchers/                   # GCC/Clang/MSVC/CMake problem matchers
 │   └── dependabot.yml              # weekly bumps for actions/* pins
+├── .clang-format
+├── .clang-format-ignore
 ├── CMakeLists.txt
 ├── CMakePresets.json
 ├── cmake/ProjectOptions.cmake
